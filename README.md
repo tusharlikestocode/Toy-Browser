@@ -1,2 +1,46 @@
 # Toy-Browser
-A toy web browser created entirely from Starch in Python 
+
+This project is a custom browser implementation based on the foundational principles taught in the book Browser Engineering. The project is currently under development and is designed to gradually evolve as more chapters from the book are implemented.
+Following : https://browser.engineering/
+
+## Current Status : 
+
+Part 1 _Loading Pages_ of the Book Completed
+
+# Downloading Web Pages
+
+We starting Chapter 1 of Web Browser Engineering: Downloading
+
+* Step 1: Formatting request URL to find the HTTP Version,host and path 
+* Step 2: Initializing a socket and sending request to the required path 
+* Step 3: Formatting the response received and displaying the result from the HTML
+
+  **Output:**
+
+  ![image](https://github.com/user-attachments/assets/3f3d12b1-ea27-4c15-97e6-a0c2ccb42ac4)
+
+
+# Drawing to the Screen
+
+Chapter 2 of Web Browser Engineering: Downloading
+
+* Step 1: Creating a GUI with tkinter 
+* Step 2: Pasting our HTML response on the canvas of the GUI 
+* Step 3: Implementing scroll feature to our window
+
+  **Output:**
+
+  ![image](https://github.com/user-attachments/assets/868df2ec-ff82-4783-b3a6-369a2f4e9e83)
+
+
+# Formatting Text
+
+* Step 1: Laying out text word by word 
+* Step 2: Splitting lines at word boundaries 
+* Step 3: Implementing support for bold or italic and different size text
+
+  Output:
+
+  ![image](https://github.com/user-attachments/assets/f46113df-4c04-48a1-b9e4-a46d3e82ec44)
+
+
