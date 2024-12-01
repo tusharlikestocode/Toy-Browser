@@ -3,6 +3,10 @@
 This project is a custom browser implementation based on the foundational principles taught in the book Browser Engineering. The project is currently under development and is designed to gradually evolve as more chapters from the book are implemented.
 Following : https://browser.engineering/
 
+## Instructions to Run : 
+
+Run: ```python main.py```
+
 ## Current Status : 
 
 Part 1 _Loading Pages_ of the Book Completed
