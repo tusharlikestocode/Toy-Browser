@@ -9,47 +9,65 @@ HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 100
 LINE_BREAKS = 25
 
+
 class Text:
     def __init__(self, text):
         self.text = text
+
 
 class Tag:
     def __init__(self, tag):
         self.tag = tag
 
+
 class Layout:
     def __init__(self, tokens):
         self.display_list = []
-        self.line =[]
+        self.line = []
         self.cursor_x = HSTEP
         self.cursor_y = VSTEP
         self.weight = "normal"
         self.style = "roman"
-        self.size =12
+        self.size = 12
+        self.case = 'lower'
+        self.align = "left"
+        self.subscript = False
         for tok in tokens:
             self.token(tok)
         self.flush()
 
     def flush(self):
         if not self.line: return
-        metrics = [font.metrics() for x,word,font in self.line]
+        metrics = [font.metrics() for x, word, font in self.line]
         max_ascent = max([metric["ascent"] for metric in metrics])
         baseline = self.cursor_y + 1.25 * max_ascent
         for x, word, font in self.line:
             y = baseline - font.metrics("ascent")
+            if(self.align=='center'):
+                line_width = sum(font.measure(word) + font.measure(" ") for _, word, font in self.line)
+                x = (WIDTH - line_width) // 2
             self.display_list.append((x, y, word, font))
         max_descent = max([metric["descent"] for metric in metrics])
+        # if(self.subscript):
+        #     self.cursor_y = baseline - 3 * max_descent
+        # else:
         self.cursor_y = baseline + 1.25 * max_descent
         self.cursor_x = HSTEP
         self.line = []
+        print("curosr in flush {}".format(self.cursor_y))
 
         # Function to create display entries with correct x,y and font
+
     def word(self, word):
+        if (self.case == 'upper'):
+            word = word.upper();
+        if(self.subscript):
+            self.cursor_y -= VSTEP/2
         font = get_font(self.size, self.weight, self.style)
         w = font.measure(word)
         if word == r'\n':
             self.cursor_y += LINE_BREAKS * 100
-
+        # print(self.cursor_y)
         if self.cursor_x + w >= WIDTH - HSTEP:
             self.flush()
             # self.cursor_y += font.metrics("linespace") * 1.25
@@ -58,29 +76,50 @@ class Layout:
         self.cursor_x += w + font.measure(" ")
 
     # Function to idenfiy the token and set the word function
-    def token(self,tok):
-        if isinstance(tok,Text):
+    def token(self, tok):
+        if isinstance(tok, Text):
             for word in tok.text.split():
                 self.word(word)
         elif tok.tag == "small":
-            self.size -=2
+            self.size -= 2
         elif tok.tag == "/small":
-            self.size +=2
+            self.size += 2
         elif tok.tag == "big":
-            self.size +=4
+            self.size += 4
         elif tok.tag == "/big":
-            self.size -=4
+            self.size -= 4
 
         elif tok.tag == "i":
             self.style = "italic"
         elif tok.tag == "/i":
             self.style = "roman"
         elif tok.tag == "b":
-            self.style = "bold"
+            self.weight = "bold"
         elif tok.tag == "/b":
             self.weight = "normal"
         elif tok.tag == "br":
             self.flush()
+        elif tok.tag == "abbr":
+            self.weight = "bold"
+            self.case = "upper"
+        elif tok.tag == "/abbr":
+            self.weight = "normal"
+            self.case = "lower"
+        elif tok.tag.startswith("h1") and 'class="title"' in tok.tag:
+            self.align = 'center'
+            self.size = 24  # Optional: Set a larger font size for title
+            self.weight = "bold"
+        elif tok.tag == "/h1":
+            self.align = 'left'
+            self.size = 12  # Reset size
+            self.weight = "normal"
+            self.flush()
+        elif tok.tag == "sup":
+            self.size = self.size // 2
+            self.subscript = True
+        elif tok.tag == "/sup":
+            self.size = self.size * 2
+            self.subscript = False
         elif tok.tag == "/p":
             self.flush()
             self.cursor_y += VSTEP
@@ -114,7 +153,7 @@ class Browser:
         self.draw()
 
     # Function to load the output as per the request
-    def load(self, url,direction='left'):
+    def load(self, url, direction='left'):
         tokens = []
         try:
             print("inside if of load")
@@ -124,8 +163,7 @@ class Browser:
                 tokens.append(Text(f.read()))
 
             elif url.type == "data":
-
-                tokens.append(Text(url.html))
+                tokens = lex(url.html)
             else:
                 body = url.request()
                 tokens = lex(body)
@@ -133,20 +171,21 @@ class Browser:
 
             print("inside except")
             text = "about:blank"
-        if(direction=='right'):
+        if (direction == 'right'):
             self.display_list = layout_reverse(text)
         else:
             self.display_list = Layout(tokens).display_list
         self.draw()
 
-    #Function to actually draw the letters on the canvas
+    # Function to actually draw the letters on the canvas
     def draw(self):
         self.canvas.delete("all")
-        for x, y, c,font in self.display_list:
+        for x, y, c, font in self.display_list:
             # print("y is {}".format(y))
             if y > self.scroll + HEIGHT: continue
             if y + VSTEP < self.scroll: continue
-            self.canvas.create_text(x, y - self.scroll, text=c,anchor='nw',font=font)
+            # print(y);
+            self.canvas.create_text(x, y - self.scroll, text=c, anchor='nw', font=font)
 
 
 class Url:
@@ -225,31 +264,30 @@ class Url:
         assert "content-encoding" not in response_headers
 
 
-
 def get_font(size, weight, style):
     key = (size, weight, style)
     if key not in FONTS:
         font = tkinter.font.Font(size=size, weight=weight,
-            slant=style)
+                                 slant=style)
         label = tkinter.Label(font=font)
         FONTS[key] = (font, label)
     return FONTS[key][0]
+
 
 # Formatting the response received and displaying the result from the HTML
 def lex(body):
     out = []
     buffer = ""
     in_tag = False
-    html = "";
     for c in body:
         if c == "<":
             in_tag = True
-            if buffer:out.append(Text(buffer))
-            buffer=""
+            if buffer: out.append(Text(buffer))
+            buffer = ""
         elif c == ">":
             in_tag = False
             out.append(Tag(buffer))
-            buffer=""
+            buffer = ""
         else:
             buffer += c;
     if not in_tag and buffer:
@@ -271,7 +309,7 @@ def lex(body):
 
 def layout_reverse(text):
     display_list = []
-    cursor_x, cursor_y =  WIDTH-HSTEP*len(text), VSTEP
+    cursor_x, cursor_y = WIDTH - HSTEP * len(text), VSTEP
     for c in text:
         if c == '\n':
             cursor_y += LINE_BREAKS
@@ -285,7 +323,6 @@ def layout_reverse(text):
     return display_list
 
 
-
 # A Simple Example Request
 # file = "file://C:\Users\tusha\Dummy.txt"
 # data = "data:text/html,Hello World!
@@ -296,8 +333,13 @@ def layout_reverse(text):
 if __name__ == "__main__":
     import sys
 
-    # url = Url(r"data:text/html,<small>a</small><big>A</big>")
-    url = Url(r"https://browser.engineering/text.html")
+    url = Url(r'data:text/html,<h1 class="title">This is a Centered Title</h1>'
+                r'<h1>This is a Regular H1</h1>')
+              # r" and something more</center><br><p>a superscrip and something more</p>")
+    # url = Url(r"data:text/html,<p>a superscript <sup>sub</sup>"
+    #           r" and something more</p>")
+    # url = Url(r"https://browser.engineering/text.html")
+    # url =    url = Url(r"https://example.com/")
     about = Url("about:blank")
     # try:
     Browser().load(url)
