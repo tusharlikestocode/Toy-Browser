@@ -41,6 +41,8 @@ Chapter 2 of Web Browser Engineering: Downloading
 
 # Formatting Text
 
+Chapter 3 of Web Browser Engineering: Downloading
+
 * Step 1: Laying out text word by word 
 * Step 2: Splitting lines at word boundaries 
 * Step 3: Implementing support for bold or italic and different size text
@@ -52,11 +54,16 @@ Chapter 2 of Web Browser Engineering: Downloading
 
 # Constructing an HTML Tree
 
+Chapter 4 of Web Browser Engineering: Downloading
+
 * Step 1: Creating a parser to HTML tokens to a tree
 * Step 2: Automatic Fixes for some malformed HTML documents 
 * Step 3: Implementing a recursive layout algorithm to lay out an HTML tree.
 
   **Output:**
+
+  ![image](https://github.com/user-attachments/assets/f5112ec0-ea1d-4497-b6d7-0a1d68d3e653)
+
 
   
 
