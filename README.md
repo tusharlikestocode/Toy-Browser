@@ -10,6 +10,8 @@ Run: ```python main.py```
 ## Current Status : 
 
 Part 1 _Loading Pages_ of the Book Completed
+Part 2 _Viewing Documents_ of the Book Started
+
 
 # Downloading Web Pages
 
@@ -43,8 +45,18 @@ Chapter 2 of Web Browser Engineering: Downloading
 * Step 2: Splitting lines at word boundaries 
 * Step 3: Implementing support for bold or italic and different size text
 
-  Output:
+  **Output:**
 
   ![image](https://github.com/user-attachments/assets/f46113df-4c04-48a1-b9e4-a46d3e82ec44)
 
+
+# Constructing an HTML Tree
+
+* Step 1: Creating a parser to HTML tokens to a tree
+* Step 2: Automatic Fixes for some malformed HTML documents 
+* Step 3: Implementing a recursive layout algorithm to lay out an HTML tree.
+
+  **Output:**
+
+  
 

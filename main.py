@@ -8,16 +8,134 @@ WIDTH, HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 100
 LINE_BREAKS = 25
-
+SELF_CLOSING_TAGS = [
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr",
+]
 
 class Text:
-    def __init__(self, text):
+    def __init__(self, text,parent):
         self.text = text
+        self.children = []
+        self.parent = parent
+
+    def __repr__(self):
+        return repr(self.text)
 
 
-class Tag:
-    def __init__(self, tag):
+class Element:
+    def __init__(self, tag,attributes,parent):
         self.tag = tag
+        self.attributes = attributes
+        self.children=[]
+        self.parent =parent
+    
+    def __repr__(self):
+        return "<" + self.tag + ">"
+
+class HTMLParser:
+    HEAD_TAGS = [
+        "base", "basefont", "bgsound", "noscript",
+        "link", "meta", "title", "style", "script",
+    ]
+    def __init__(self,body):
+        self.body = body
+        self.unfinished =[]
+    def get_attributes(self,text):
+        parts = text.split()
+        tag = parts[0].casefold()
+        attributes = {}
+        for attrpair in parts[1:]:
+            if "=" in attrpair:
+                key,value = attrpair.split("=",1)
+                if len(value) >2 and value[0] in ["'","\""]:
+                    value =value[1:-1]
+                attributes[key.casefold()]= value
+            else:
+                attributes[attrpair.casefold()]= ""
+            
+        return tag,attributes
+    # Handling human error
+    def implict_tags(self,tag):
+        while True:
+            open_tags =  [node.tag for node in self.unfinished]
+            if open_tags == [] and tag != "html":
+                self.add_tag("html")
+            elif open_tags == ["html"] and tag not in ["head","body","/html"]:
+                if tag in self.HEAD_TAGS:
+                    self.add_tag("head")
+                else:
+                    self.add_tag("body")
+
+            elif open_tags == ["html","head"] and tag not in ["/head"] + self.HEAD_TAGS:
+                self.add_tag("/head")
+
+            else:
+                break
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    def add_text(self,text):
+        if text.isspace(): return
+        self.implict_tags(None)
+        parent = self.unfinished[-1];
+        node = Text(text,parent)
+        parent.children.append(node)
+
+    def add_tag(self,tag):
+        tag, attributes = self.get_attributes(tag)
+        self.implict_tags(tag)
+        if tag.startswith("!"): return
+        if tag.startswith("/"):
+            if len(self.unfinished)==1: return
+            node = self.unfinished.pop()
+            parent = self.unfinished[-1]
+            parent.children.append(node)
+        elif tag in SELF_CLOSING_TAGS:
+            parent = self.unfinished[-1]
+            node = Element(tag,parent,attributes)
+            self.unfinished.append(node)        
+        else:
+            parent = self.unfinished[-1] if self.unfinished else None
+            node = Element(tag,parent,attributes)
+            self.unfinished.append(node)
+
+    def finish(self):
+        if not self.unfinished:
+            self.implicit_tags(None)
+        while len(self.unfinished) >1:
+            node = self.unfinished.pop()
+            parent = self.unfinished[-1]
+            parent.children.append(node)
+        return self.unfinished.pop()
+    
+    
+
+    def parse(self):
+        text = ""
+        in_tag = False
+        for c in self.body:
+            if c == "<":
+                in_tag = True
+                if text: self.add_text(text)
+                text = ""
+            elif c == ">":
+                in_tag = False
+                self.add_tag(text)
+                text = ""
+            else:
+                text += c;
+        if not in_tag and text:
+            self.add_text(text)
+        return self.finish()
+
+
 
 
 class Layout:
@@ -32,8 +150,8 @@ class Layout:
         self.case = 'lower'
         self.align = "left"
         self.subscript = False
-        for tok in tokens:
-            self.token(tok)
+        self.recurse(tokens)
+
         self.flush()
 
     def flush(self):
@@ -80,54 +198,60 @@ class Layout:
         self.line.append((self.cursor_x, word, font))
         self.cursor_x += w + font.measure(" ")
 
-    # Function to idenfiy the token and set the word function
-    def token(self, tok):
-        if isinstance(tok, Text):
-            for word in tok.text.split():
-                self.word(word)
-        elif tok.tag == "small":
+    def open_tag(self,tag):
+        if tag == "small":
             self.size -= 2
-        elif tok.tag == "/small":
-            self.size += 2
-        elif tok.tag == "big":
+        elif tag == "big":
             self.size += 4
-        elif tok.tag == "/big":
-            self.size -= 4
-
-        elif tok.tag == "i":
-            self.style = "italic"
-        elif tok.tag == "/i":
-            self.style = "roman"
-        elif tok.tag == "b":
-            self.weight = "bold"
-        elif tok.tag == "/b":
-            self.weight = "normal"
-        elif tok.tag == "br":
+        elif tag == "i":
+            self.style = "italic"        
+        elif tag == "b":
+            self.weight = "bold"        
+        elif tag == "br":
             self.flush()
-        elif tok.tag == "abbr":
+        elif tag == "abbr":
             self.weight = "bold"
-            self.case = "upper"
-        elif tok.tag == "/abbr":
-            self.weight = "normal"
-            self.case = "lower"
-        # elif tok.tag.startswith("h1") and 'class="title"' in tok.tag:
-        #     self.align = 'center'
-        #     self.size = 24  # Optional: Set a larger font size for title
-        #     self.weight = "bold"
-        # elif tok.tag == "/h1":
-        #     self.align = 'left'
-        #     self.size = 12  # Reset size
-        #     self.weight = "normal"
-        #     self.flush()
-        elif tok.tag == "sup":
+            self.case = "upper"       
+        elif tag == "sup":
             self.size = self.size // 2
             self.subscript = True
-        elif tok.tag == "/sup":
+        
+        
+        
+        
+    def close_tag(self, tag):
+        if tag == "i":
+            self.style = "roman"
+        elif tag == "sup":
             self.size = self.size * 2
             self.subscript = False
-        elif tok.tag == "/p":
+        elif tag == "p":
             self.flush()
             self.cursor_y += VSTEP
+        elif tag == "abbr":
+            self.weight = "normal"
+            self.case = "lower"
+        elif tag == "b":
+            self.weight = "normal"
+        elif tag == "i":
+            self.style = "roman"
+        elif tag == "big":
+            self.size -= 4
+        elif tag == "small":
+            self.size += 2
+
+    def recurse(self, tree):
+        if isinstance(tree, Text):
+            for word in tree.text.split():
+                self.word(word)
+        else:
+            self.open_tag(tree.tag)
+            for child in tree.children:
+                self.recurse(child)
+            self.close_tag(tree.tag)
+            
+
+        
 
 
 
@@ -136,6 +260,7 @@ class Browser:
         self.y = 0
         self.x = 0
         self.scroll = 0
+        self.nodes = []
         self.window = tkinter.Tk()
         self.bi_times = tkinter.font.Font(
             family="Times",
@@ -159,28 +284,30 @@ class Browser:
 
     # Function to load the output as per the request
     def load(self, url, direction='left'):
-        tokens = []
-        try:
-            print("inside if of load")
-            if url.type == "file":
-                finalPath = url.filepath.replace("\\", "\\\\")
-                f = open(finalPath)
-                tokens.append(Text(f.read()))
+        # tokens = []
+        # try:
+        #     print("inside if of load")
+        #     # if url.type == "file":
+        #     #     finalPath = url.filepath.replace("\\", "\\\\")
+        #     #     f = open(finalPath)
+        #     #     tokens.append(Text(f.read()))
 
-            elif url.type == "data":
-                tokens = lex(url.html)
-            else:
-                body = url.request()
-                tokens = lex(body)
-        except:
-
-            print("inside except")
-            text = "about:blank"
-        if (direction == 'right'):
-            self.display_list = layout_reverse(text)
-        else:
-            self.display_list = Layout(tokens).display_list
+        #     # elif url.type == "data":
+        #     #     self.nodes = HTMLParser(url.html).parse()
+        #     # else:
+        body = url.request()
+        nodes = HTMLParser(body).parse()
+        self.display_list = Layout(nodes).display_list
         self.draw()
+                
+        # except:
+
+        #     print("inside except")
+        #     text = "about:blank"
+        # if (direction == 'right'):
+        #     self.display_list = layout_reverse(text)
+        # else:
+        
 
     # Function to actually draw the letters on the canvas
     def draw(self):
@@ -280,25 +407,7 @@ def get_font(size, weight, style):
 
 
 # Formatting the response received and displaying the result from the HTML
-def lex(body):
-    out = []
-    buffer = ""
-    in_tag = False
-    for c in body:
-        if c == "<":
-            in_tag = True
-            if buffer: out.append(Text(buffer))
-            buffer = ""
-        elif c == ">":
-            in_tag = False
-            out.append(Tag(buffer))
-            buffer = ""
-        else:
-            buffer += c;
-    if not in_tag and buffer:
-        out.append(Text(buffer))
-    # finalHtml = html.replace("&lt;", "<").replace("&gt;", ">");
-    return out
+
 
 
 # def layout(tokens):
@@ -310,7 +419,10 @@ def lex(body):
 #     for tok in tokens:
 #
 #     return display_list
-
+def print_tree(node, indent=0):
+        print(" " * indent, node)
+        for child in node.children:
+            print_tree(child, indent + 2)
 
 def layout_reverse(text):
     display_list = []
@@ -343,11 +455,14 @@ if __name__ == "__main__":
               # r" and something more</center><br><p>a superscrip and something more</p>")
     # url = Url(r"data:text/html,<p>a superscript <sup>sub</sup>"
     #           r" and something more</p>")
-    url = Url(r"https://browser.engineering/text.html")
-    # url =    url = Url(r"https://example.com/")
-    about = Url("about:blank")
+    url = Url(r"https://browser.engineering/")
+    # url = Url(r"https://example.com/")
+    # about = Url("about:blank")
     # try:
     Browser().load(url)
+    # body = url.request()
+    # nodes = HTMLParser(body).parse()
+    # print_tree(nodes)
     # finally:
     #     Browser().load(about)
     tkinter.mainloop()
