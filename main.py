@@ -61,6 +61,11 @@ class Layout:
     def word(self, word):
         if (self.case == 'upper'):
             word = word.upper();
+        if word.find("&gt;")!=-1:
+            word="<"
+        if word.find("&lt;")!=-1:
+            word=">"
+        # word.replace('&lt;','>')
         if(self.subscript):
             self.cursor_y -= VSTEP/2
         font = get_font(self.size, self.weight, self.style)
@@ -105,15 +110,15 @@ class Layout:
         elif tok.tag == "/abbr":
             self.weight = "normal"
             self.case = "lower"
-        elif tok.tag.startswith("h1") and 'class="title"' in tok.tag:
-            self.align = 'center'
-            self.size = 24  # Optional: Set a larger font size for title
-            self.weight = "bold"
-        elif tok.tag == "/h1":
-            self.align = 'left'
-            self.size = 12  # Reset size
-            self.weight = "normal"
-            self.flush()
+        # elif tok.tag.startswith("h1") and 'class="title"' in tok.tag:
+        #     self.align = 'center'
+        #     self.size = 24  # Optional: Set a larger font size for title
+        #     self.weight = "bold"
+        # elif tok.tag == "/h1":
+        #     self.align = 'left'
+        #     self.size = 12  # Reset size
+        #     self.weight = "normal"
+        #     self.flush()
         elif tok.tag == "sup":
             self.size = self.size // 2
             self.subscript = True
@@ -333,12 +338,12 @@ def layout_reverse(text):
 if __name__ == "__main__":
     import sys
 
-    url = Url(r'data:text/html,<h1 class="title">This is a Centered Title</h1>'
-                r'<h1>This is a Regular H1</h1>')
+    # url = Url(r'data:text/html,<h1 class="title">This is a Centered Title</h1>'
+    #             r'<h1>This is a Regular H1</h1>')
               # r" and something more</center><br><p>a superscrip and something more</p>")
     # url = Url(r"data:text/html,<p>a superscript <sup>sub</sup>"
     #           r" and something more</p>")
-    # url = Url(r"https://browser.engineering/text.html")
+    url = Url(r"https://browser.engineering/text.html")
     # url =    url = Url(r"https://example.com/")
     about = Url("about:blank")
     # try:
