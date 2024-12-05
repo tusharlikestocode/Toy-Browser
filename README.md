@@ -15,7 +15,7 @@ Part 2 _Viewing Documents_ of the Book Started
 
 # Downloading Web Pages
 
-We starting Chapter 1 of Web Browser Engineering: Downloading
+We starting Chapter 1 of Web Browser Engineering
 
 * Step 1: Formatting request URL to find the HTTP Version,host and path 
 * Step 2: Initializing a socket and sending request to the required path 
@@ -28,7 +28,7 @@ We starting Chapter 1 of Web Browser Engineering: Downloading
 
 # Drawing to the Screen
 
-Chapter 2 of Web Browser Engineering: Downloading
+Chapter 2 of Web Browser Engineering
 
 * Step 1: Creating a GUI with tkinter 
 * Step 2: Pasting our HTML response on the canvas of the GUI 
@@ -41,7 +41,7 @@ Chapter 2 of Web Browser Engineering: Downloading
 
 # Formatting Text
 
-Chapter 3 of Web Browser Engineering: Downloading
+Chapter 3 of Web Browser Engineering
 
 * Step 1: Laying out text word by word 
 * Step 2: Splitting lines at word boundaries 
@@ -54,7 +54,7 @@ Chapter 3 of Web Browser Engineering: Downloading
 
 # Constructing an HTML Tree
 
-Chapter 4 of Web Browser Engineering: Downloading
+Chapter 4 of Web Browser Engineering
 
 * Step 1: Creating a parser to HTML tokens to a tree
 * Step 2: Automatic Fixes for some malformed HTML documents 
