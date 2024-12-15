@@ -1,7 +1,9 @@
 import socket
 import ssl
-import tkinter
+import tkinter as tk
 import tkinter.font
+from tkinter import Label, Entry, Button
+
 
 FONTS = {}
 WIDTH, HEIGHT = 800, 600
@@ -120,19 +122,39 @@ class HTMLParser:
     def parse(self):
         text = ""
         in_tag = False
-        for c in self.body:
-            if c == "<":
-                in_tag = True
-                if text: self.add_text(text)
-                text = ""
-            elif c == ">":
-                in_tag = False
-                self.add_tag(text)
-                text = ""
-            else:
-                text += c;
+        in_comment = False
+        i=0
+        while i < len(self.body):
+                if in_comment:
+                    # Check for the end of a comment
+                    if self.body[i:i+3] == "-->":
+                        in_comment = False
+                        i += 3  # Skip the closing -->
+                    else:
+                        i += 1  # Continue skipping comment content
+                elif self.body[i:i+4] == "<!--":
+                    # Start of a comment
+                    in_comment = True
+                    i += 4  # Skip the opening <!--
+                elif self.body[i] == "<":
+                    in_tag = True
+                    if text: 
+                        self.add_text(text)
+                    text = ""
+                    i += 1
+                elif self.body[i] == ">":
+                    in_tag = False
+                    self.add_tag(text)
+                    text = ""
+                    i += 1
+                else:
+                    text += self.body[i]
+                    i += 1
+
+            # Handle any remaining text outside tags/comments
         if not in_tag and text:
-            self.add_text(text)
+                self.add_text(text)
+
         return self.finish()
 
 
@@ -151,7 +173,6 @@ class Layout:
         self.align = "left"
         self.subscript = False
         self.recurse(tokens)
-
         self.flush()
 
     def flush(self):
@@ -198,36 +219,31 @@ class Layout:
         self.line.append((self.cursor_x, word, font))
         self.cursor_x += w + font.measure(" ")
 
-    def open_tag(self,tag):
-        if tag == "small":
+    def open_tag(self, tag):
+        if tag == "p":
+            self.flush()  # End the current paragraph
+            self.cursor_y += VSTEP  # Move to a new line for the next paragraph
+        elif tag == "small":
             self.size -= 2
         elif tag == "big":
             self.size += 4
         elif tag == "i":
-            self.style = "italic"        
+            self.style = "italic"
         elif tag == "b":
-            self.weight = "bold"        
-        elif tag == "br":
-            self.flush()
+            self.weight = "bold"
         elif tag == "abbr":
             self.weight = "bold"
-            self.case = "upper"       
+            self.case = "upper"
         elif tag == "sup":
             self.size = self.size // 2
             self.subscript = True
-        
-        
-        
-        
-    def close_tag(self, tag):
-        if tag == "i":
-            self.style = "roman"
-        elif tag == "sup":
-            self.size = self.size * 2
-            self.subscript = False
-        elif tag == "p":
+        elif tag == "br":
             self.flush()
-            self.cursor_y += VSTEP
+
+    def close_tag(self, tag):
+        if tag == "p":
+            self.flush()  # End the current paragraph
+            self.cursor_y += VSTEP  # Add spacing for the next sibling
         elif tag == "abbr":
             self.weight = "normal"
             self.case = "lower"
@@ -239,11 +255,26 @@ class Layout:
             self.size -= 4
         elif tag == "small":
             self.size += 2
+        elif tag == "sup":
+            self.size = self.size * 2
+            self.subscript = False
 
     def recurse(self, tree):
         if isinstance(tree, Text):
             for word in tree.text.split():
                 self.word(word)
+        elif tree.tag == "p":
+            self.flush()  # Ensure each <p> starts as a sibling
+            self.open_tag(tree.tag)
+            for child in tree.children:
+                self.recurse(child)
+            self.close_tag(tree.tag)
+        elif tree.tag == "li":
+            self.flush()  # Ensure each <li> starts as a sibling
+            self.open_tag(tree.tag)
+            for child in tree.children:
+                self.recurse(child)
+            self.close_tag(tree.tag)
         else:
             self.open_tag(tree.tag)
             for child in tree.children:
@@ -284,29 +315,24 @@ class Browser:
 
     # Function to load the output as per the request
     def load(self, url, direction='left'):
-        # tokens = []
-        # try:
-        #     print("inside if of load")
-        #     # if url.type == "file":
-        #     #     finalPath = url.filepath.replace("\\", "\\\\")
-        #     #     f = open(finalPath)
-        #     #     tokens.append(Text(f.read()))
+        nodes = []
+       
+        print("inside if of load")
+        if url.type == "file":
+            finalPath = url.filepath.replace("\\", "\\\\")
+            f = open(finalPath)
+            nodes.append(Text(f.read()))
 
-        #     # elif url.type == "data":
-        #     #     self.nodes = HTMLParser(url.html).parse()
-        #     # else:
-        body = url.request()
-        nodes = HTMLParser(body).parse()
+        elif url.type == "data":
+            nodes = HTMLParser(url.html).parse()
+        else:
+            body = url.request()
+            nodes = HTMLParser(body).parse()
+
         self.display_list = Layout(nodes).display_list
         self.draw()
                 
-        # except:
-
-        #     print("inside except")
-        #     text = "about:blank"
-        # if (direction == 'right'):
-        #     self.display_list = layout_reverse(text)
-        # else:
+        
         
 
     # Function to actually draw the letters on the canvas
@@ -450,15 +476,26 @@ def layout_reverse(text):
 if __name__ == "__main__":
     import sys
 
-    # url = Url(r'data:text/html,<h1 class="title">This is a Centered Title</h1>'
+#     url = Url(r'''data:text/html,<ul>
+#   <li>Parent
+#   <ul>
+#     <li>Child</li>
+#   </ul>
+# </li>
+
+#               ''')
     #             r'<h1>This is a Regular H1</h1>')
               # r" and something more</center><br><p>a superscrip and something more</p>")
     # url = Url(r"data:text/html,<p>a superscript <sup>sub</sup>"
     #           r" and something more</p>")
-    url = Url(r"https://browser.engineering/")
+    url = Url(r"https://browser.engineering/html.html")
     # url = Url(r"https://example.com/")
     # about = Url("about:blank")
-    # try:
+    # try
+    # b = Browser()
+    # frame = b.window
+
+
     Browser().load(url)
     # body = url.request()
     # nodes = HTMLParser(body).parse()
@@ -466,3 +503,5 @@ if __name__ == "__main__":
     # finally:
     #     Browser().load(about)
     tkinter.mainloop()
+
+
