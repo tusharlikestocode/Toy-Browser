@@ -293,6 +293,8 @@ class Browser:
         self.scroll = 0
         self.nodes = []
         self.window = tkinter.Tk()
+        self.window.geometry("800x600")
+        self.window.title("Simple Browser")
         self.bi_times = tkinter.font.Font(
             family="Times",
             size=16,
@@ -300,14 +302,34 @@ class Browser:
             slant="italic",
         )
         self.window.bind("<MouseWheel>", self.scrolldown)
-        self.canvas = tkinter.Canvas(
+        self.label = Label(self.window, text="", font=("Courier", 12))
+        self.label.pack()
+
+        self.entry = Entry(self.window, width=60)
+        self.entry.focus_set()
+        self.entry.pack(pady=10)
+
+        Button(self.window, text="Load URL", width=20, command=self.load_url).pack(pady=10)
+
+        # Create canvas for rendering content
+        self.canvas = tk.Canvas(
             self.window,
             width=WIDTH,
             height=HEIGHT
         )
-        self.canvas.pack(fill="both", expand=1, )
+        self.canvas.pack(fill="both", expand=1)
 
     # Function to scroll down
+    def load_url(self):
+        input_url = self.entry.get() # Get the URL from the entry widget
+        try:
+            print(input_url)
+            url = Url(input_url)  # Parse the URL
+            self.load(url)       # Load the content in the browser
+        except Exception as e:
+            self.label.configure(text=f"Error: {e}")
+
+
     def scrolldown(self, e):
         if self.scroll - e.delta >= 0:
             self.scroll -= e.delta
@@ -321,7 +343,9 @@ class Browser:
         if url.type == "file":
             finalPath = url.filepath.replace("\\", "\\\\")
             f = open(finalPath)
-            nodes.append(Text(f.read()))
+            # nodes.append(Text(f.read()))
+            nodes = HTMLParser(f.read()).parse()
+
 
         elif url.type == "data":
             nodes = HTMLParser(url.html).parse()
@@ -488,20 +512,23 @@ if __name__ == "__main__":
               # r" and something more</center><br><p>a superscrip and something more</p>")
     # url = Url(r"data:text/html,<p>a superscript <sup>sub</sup>"
     #           r" and something more</p>")
-    url = Url(r"https://browser.engineering/html.html")
+    # url = Url(r"https://browser.engineering/html.html")
     # url = Url(r"https://example.com/")
     # about = Url("about:blank")
     # try
     # b = Browser()
     # frame = b.window
+    browser = Browser()
 
+    # Run the Tkinter main loop
+    browser.window.mainloop()
 
-    Browser().load(url)
+    # Browser().load(url)
     # body = url.request()
     # nodes = HTMLParser(body).parse()
     # print_tree(nodes)
     # finally:
     #     Browser().load(about)
-    tkinter.mainloop()
+    # tkinter.mainloop()
 
 
